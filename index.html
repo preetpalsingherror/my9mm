@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Weapon 🔫</title>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Oswald:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* (CSS REMAINS THE SAME - Keeping the visuals high quality) */
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            height: 100vh; width: 100vw;
+            background-color: #050505;
+            background-image: radial-gradient(circle at 50% 30%, #1a1a1a 0%, #000 70%);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            overflow: hidden;
+            font-family: 'Oswald', sans-serif;
+        }
+        .flash-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #fff; opacity: 0; pointer-events: none; z-index: 50;
+        }
+        .flash-active { animation: flashAnim 0.05s; } /* Faster flash for realism */
+        @keyframes flashAnim { 0%{opacity:0.8;} 100%{opacity:0;} }
+
+        .lyric-zone {
+            position: absolute; top: 15%; width: 90%; text-align: center; height: 100px; z-index: 10;
+        }
+        .lyric-text {
+            font-family: 'Black Ops One', cursive; color: #d4af37; font-size: 2rem;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); opacity: 0; transform: scale(0.5);
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Faster text for syncing */
+        }
+        .lyric-text.visible { opacity: 1; transform: scale(1); }
+
+        .gun-stage {
+            position: relative; width: 320px; height: 250px;
+            display: flex; align-items: center; justify-content: center; margin-top: 50px;
+        }
+        .gun-wrapper { width: 280px; height: 180px; position: relative; }
+        .gun-slide {
+            position: absolute; top: 0; left: 0; width: 280px; height: 60px;
+            background: linear-gradient(90deg, #333, #111, #333);
+            border-radius: 5px; border: 1px solid #444; z-index: 2;
+            transition: transform 0.05s; /* Snappy recoil */
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.1);
+        }
+        .slide-grip {
+            position: absolute; right: 10px; top: 10px; width: 40px; height: 40px;
+            background: repeating-linear-gradient(90deg, #111, #111 2px, #333 2px, #333 4px);
+        }
+        .gun-frame {
+            position: absolute; top: 60px; left: 40px; width: 200px; height: 100px; z-index: 1;
+        }
+        .grip-handle {
+            position: absolute; right: 0; top: 0; width: 70px; height: 110px;
+            background: #1a1a1a; border-radius: 0 0 20px 20px; transform: skewX(-10deg);
+            border: 1px solid #333; background-image: radial-gradient(#000 20%, transparent 20%); background-size: 4px 4px;
+        }
+        .trigger-guard {
+            position: absolute; right: 75px; top: 10px; width: 50px; height: 40px;
+            border: 4px solid #333; border-top: none; border-radius: 0 0 20px 20px;
+        }
+        .trigger {
+            position: absolute; right: 85px; top: 15px; width: 10px; height: 25px;
+            background: #d4af37; border-radius: 0 0 50% 50%; cursor: pointer; transition: transform 0.1s;
+        }
+        .recoil-slide { transform: translateX(-50px); } /* Stronger recoil */
+        .recoil-gun { animation: kick 0.1s; }
+        @keyframes kick { 0% { transform: rotate(0deg) translateX(0); } 50% { transform: rotate(-5deg) translateX(-10px); } 100% { transform: rotate(0deg) translateX(0); } }
+
+        .safety-switch {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.2); border: 2px solid red; color: red;
+            padding: 15px 30px; font-family: 'Black Ops One'; letter-spacing: 2px;
+            cursor: pointer; z-index: 100; box-shadow: 0 0 20px red; animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 50% { opacity: 0.5; } }
+        .fire-zone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; cursor: crosshair; display: none; }
+        
+        .shell {
+            position: absolute; width: 8px; height: 20px; background: gold; border-radius: 2px; z-index: 0; opacity: 1;
+        }
+
+        .final-msg {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #000; z-index: 200;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 1s;
+        }
+        .wa-btn {
+            background: #d4af37; color: #000; padding: 15px 40px;
+            text-decoration: none; font-weight: bold; margin-top: 20px;
+            font-family: 'Oswald'; text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="shot-sound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/1659/1659-preview.mp3" type="audio/mpeg">
+    </audio>
+    <div class="flash-overlay" id="flash"></div>
+
+    <div class="lyric-zone">
+        <div class="lyric-text" id="lyric-display"></div>
+    </div>
+
+    <div class="gun-stage" id="gun-stage">
+        <div class="gun-wrapper" id="gun-body">
+            <div class="gun-slide" id="slide">
+                <div class="slide-grip"></div>
+                <div style="position: absolute; left: 10px; top: 20px; color: #555; font-size: 10px; font-family: monospace;">ZOHARA-9MM</div>
+            </div>
+            <div class="gun-frame">
+                <div class="grip-handle"></div>
+                <div class="trigger-guard"></div>
+                <div class="trigger" id="trigger"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="safety-switch" id="safety-btn" onclick="disengageSafety()">DISENGAGE SAFETY</div>
+    <div class="fire-zone" id="fire-btn" onclick="fireGun()"></div>
+
+    <div class="final-msg" id="final">
+        <h1 style="color:#d4af37; font-family:'Black Ops One'; font-size:3rem; margin:0;">MY WEAPON</h1>
+        <p style="color:#fff; letter-spacing:2px; margin-top:10px;">DANGEROUS & MINE.</p>
+        <a href="#" id="wa-link" class="wa-btn">I'm Your Gun 🔫</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        const yourPhoneNumber = "917795253497"; 
+
+        const lyrics = [
+            "THEY SEE A GIRL...",
+            "I SEE MY WEAPON.",
+            "YOU ARE LETHAL.",
+            "YOU ARE DANGEROUS.",
+            "BUT IN MY HANDS...",
+            "YOU ARE SAFE.",
+            "THE WORLD IS JEALOUS,",
+            "CAUSE I KEEP YOU CLOSE.",
+            "I KEEP YOU LOADED.",
+            "MY RIDE OR DIE."
+        ];
+
+        let index = -1;
+        const gunBody = document.getElementById('gun-body');
+        const slide = document.getElementById('slide');
+        const trigger = document.getElementById('trigger');
+        const flash = document.getElementById('flash');
+        const display = document.getElementById('lyric-display');
+        const safetyBtn = document.getElementById('safety-btn');
+        const fireBtn = document.getElementById('fire-btn');
+        const gunStage = document.getElementById('gun-stage');
+        
+        // AUDIO ELEMENTS
+        const music = document.getElementById('bg-music');
+        const shot = document.getElementById('shot-sound');
+
+        // Set volume levels
+        music.volume = 0.5; // Background music at 50%
+        shot.volume = 1.0;  // Gunshot at 100%
+
+        function disengageSafety() {
+            // 1. Start Music
+            music.play().catch(e => console.log("Audio play failed: ", e));
+            
+            // 2. Rack Slide Sound (Simulated by playing a very short clip or just relying on visual)
+            // If you have a rack sound, play it here.
+            
+            safetyBtn.style.display = 'none';
+            fireBtn.style.display = 'block';
+            
+            // Rack Slide Visual
+            slide.classList.add('recoil-slide');
+            setTimeout(() => slide.classList.remove('recoil-slide'), 200);
+            
+            display.innerText = "READY TO FIRE";
+            display.classList.add('visible');
+        }
+
+        function fireGun() {
+            index++;
+
+            // 1. PLAY SOUND (Rewind to start to allow rapid fire)
+            shot.currentTime = 0;
+            shot.play();
+
+            // 2. VISUALS
+            slide.classList.add('recoil-slide');
+            gunBody.classList.add('recoil-gun');
+            trigger.style.transform = "rotate(-20deg) translateX(-2px)";
+            flash.classList.add('flash-active');
+            ejectShell();
+
+            if(navigator.vibrate) navigator.vibrate(50);
+
+            // 3. LYRICS
+            if(index < lyrics.length) {
+                display.classList.remove('visible');
+                
+                // Slight delay so the old text vanishes before new one pops
+                setTimeout(() => {
+                    display.innerText = lyrics[index];
+                    display.classList.add('visible');
+                }, 50);
+            } else {
+                finishSequence();
+            }
+
+            // RESET ANIMATION CLASSES
+            setTimeout(() => {
+                slide.classList.remove('recoil-slide');
+                gunBody.classList.remove('recoil-gun');
+                flash.classList.remove('flash-active');
+                trigger.style.transform = "rotate(0deg)";
+            }, 80);
+        }
+
+        function ejectShell() {
+            const shell = document.createElement('div');
+            shell.classList.add('shell');
+            shell.style.top = "60px";
+            shell.style.left = "150px"; 
+            gunStage.appendChild(shell);
+
+            let x = 0; let y = 0; let rot = 0;
+            const interval = setInterval(() => {
+                x += 8; y -= 6; rot += 30; // Faster ejection
+                shell.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+                if(x > 50) y += 12; // Gravity
+                if(x > 350) { clearInterval(interval); shell.remove(); }
+            }, 10);
+        }
+
+        function finishSequence() {
+            fireBtn.style.display = 'none';
+            setTimeout(() => {
+                document.getElementById('final').style.opacity = 1;
+                document.getElementById('final').style.pointerEvents = 'all';
+                confetti({ particleCount: 150, spread: 100, colors: ['#d4af37', '#000'] });
+                
+                const msg = "I pulled the trigger! 🔫❤️ I am your dangerous weapon. Keeping you safe forever.";
+                document.getElementById('wa-link').href = `https://wa.me/${yourPhoneNumber}?text=${encodeURIComponent(msg)}`;
+            }, 500);
+        }
+    </script>
+</body>
+</html>
